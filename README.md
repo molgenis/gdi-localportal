@@ -73,3 +73,9 @@ keycloak:9000 (or localhost:9000) > Administration Console > admin:admin > switc
 the data is persistent across the restart of instance. In order to delete all the postgress data and start fresh
 
     $ sudo rm -rf postgres/psql_data/ ; mkdir postgres/psql_data/
+
+
+# Shutting down
+
+    $ docker compose down --rmi all -v                                  # shut down and remove all images and volumes
+    $ sudo rm -rf postgres/psql_data/; mkdir postgres/psql_data/        # clean all the permanent postgres data
