@@ -25,7 +25,7 @@ Spin up docker compose
 
 to bring up
 
-ports exposed:
+ports exposed from docker
  - 3000 rems
  - 5432 postgres
  - 8080 localportal

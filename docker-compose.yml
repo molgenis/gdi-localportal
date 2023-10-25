@@ -73,7 +73,7 @@ services:
       timeout: 5s
       #start_period: 2m
   localportal:
-    image: molgenis/molgenis-emx2:latest
+    image: umcg/localportal
     env_file: ./.env
     build:
       context: ./localportal/
