@@ -44,7 +44,6 @@ navigate to Localportal
  - [Localportal](http://localhost:8080/)
  - use right to site `Sign In` > you will be redirected to [keycloak](http://keycloak:9000)
    - the use username is `lportaluser` and the password `lportalpass`
-
  - go to [gdiportal](http://localhost:8080/gdiportal/) - it is already pre-populated with example data 
    - check the table [Dataset](http://localhost:8080/gdiportal/tables/#/Dataset)
    - this table's content get replicated to REMS
@@ -67,8 +66,14 @@ navigate back to Localportal > gportal
 docker compose exec localportal bash
 
 
-where is stored waht
-    postgres is permanent in ...
+## The files locations inside the instances
+
+If you wish to check the additional logs inside the instances, you can use (example for Localportal)
+
+    $ docker-compose exec localportal /bin/bash
+
+The instances have stored their installation files and the output of those installations inside
+    /opt/[instance name]/
 
 users per service
 
@@ -82,33 +87,40 @@ localhost:8080 > signin
     lportaluser
     lportalpass
 
-localhost:8080/apps/central/#/admin
-    admin / admin
 
 Logs for localportal
     docker-compose exec localportal /bin/bash
-    localportal # cat /opt/localportal/install.log
+    root# cat /opt/localportal/install.sh.log
 
 # REMS
 
-$ echo VERBOSE=2 >> /opt/rems/synchronization.config
-$ /opt/rems/synchronization.sh
+Increase synchronization script verbosity:
+    $ docker-compose exec rems /bin/bash
+    root# echo VERBOSE=2 >> /opt/rems/synchronization.config
+    root# source /opt/rems/synchronization.sh
 
 
 # Keycloak
 
-keycloak:9000 (or localhost:9000) > Administration Console > admin:admin > switch realm from master to lportal
-    > client > lportalclient >
+Is avaialable on http://keycloak:9000 (or http://localhost:9000 )
+
+You can modify the existing lportaluser or make a new one, by loging into Keycloak
+ - go to Administration Console and use default keycloak admin username `admin` and password `admin`
+ - switch realm from `master` to `lportal`
+   - here you can modify lportalclient ( client > lportalclient )
+   - or modify users ( Users > lportaluser   
 
 
 # Postgres
 
-the data is persistent across the restart of instance. In order to delete all the postgress data and start fresh
+In case that the postgres instance would get accidentaly restarted or shut down, the database files are saved stored safely inside the host machine `postgres/psql_data`. This folder is exposed as a volume of the postgres instance.
+In case you wish to delete the postgress data and start with fresh instance, you can issue
 
     $ sudo rm -rf postgres/psql_data/ ; mkdir postgres/psql_data/
 
+this command will remove the existing data and recreate the `psql_data` folder.
 
-# Shutting down
+# Shutting down and cleaning up
 
     $ docker compose down --rmi all -v                                  # shut down and remove all images and volumes
     $ sudo rm -rf postgres/psql_data/; mkdir postgres/psql_data/        # clean all the permanent postgres data

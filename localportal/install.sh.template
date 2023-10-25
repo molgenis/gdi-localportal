@@ -42,11 +42,12 @@ if [[ "\${?}" -eq "0" ]]; then
 else
    echo "no, creating now ... "
    echo -n "     - adding user \${REMS_OWNER_EMAIL} to Molgenis list of users ... "
-   curl -s ${_LOCALPORTAL_URL}/api/graphql -m 120 -H "Content-Type: application/json" -d '{"query": "mutation { change(users:[{email: \\"'\${REMS_OWNER_EMAIL}'\\" }]){ message }}"}' 2>&1
+   curl -s ${_LOCALPORTAL_URL}/api/graphql -m 120 -H "Content-Type: application/json" -d '{"query": "mutation { change(users:[{email: \\"'\${REMS_OWNER_EMAIL}'\\" }]){ message }}"}' 2>&1 1>/dev/null
    echo "done"
    echo -n "     - fake user login of \${REMS_OWNER_EMAIL} ... "
-   curl -s ${_LOCALPORTAL_URL}/api/graphql -m 120 -H "Content-Type: application/json" -d '{"query": "mutation { signin (email: \\"'\${REMS_OWNER_EMAIL}'\\", password: \\"'\${REMS_OWNER_PASS}'\\") { token } }"}' 2>&1
-   echo "done"
+   curl -s ${_LOCALPORTAL_URL}/api/graphql -m 120 -H "Content-Type: application/json" -d '{"query": "mutation { signin (email: \\"'\${REMS_OWNER_EMAIL}'\\", password: \\"'\${REMS_OWNER_PASS}'\\") { token } }"}' 2>&1 | grep -q "signin"
+   [[ "$?" -eq "0" ]] && echo "done" || echo "error"
+
    echo -n "     - and assigning ownership ... "
    curl -s ${_GRAPHQL_URL} -m 120 -H "x-molgenis-token:\${_TOKEN}" -H "Content-Type: application/json" -d '{"query": "mutation{change(members: [ { email:\\"'\${REMS_OWNER_EMAIL}'\\",role:\\"Owner\\"} ] ) { message } }"}' 2>&1 | grep -q "Meta update success"
    [[ "$?" -eq "0" ]] && echo "done" || echo "error"
