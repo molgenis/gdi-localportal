@@ -29,8 +29,7 @@ Spin up docker compose
 
     $ docker-compose up -d
 
-(it takes about 4 min on 2 core / 8gb ram /
-
+(the build and spinup time is approximately 4 min on 2 core and 8gb ram host, note that instances still need to install the services after that, which takes additional 2 minutes or so)
 
 Ports exposed on the host machine are
  - 3000 rems
@@ -40,10 +39,11 @@ Ports exposed on the host machine are
 
 ## First use of the Localportal
 
-navigate to Localportal 
+navigate to Localportal
+
  - [Localportal](http://localhost:8080/)
- - use right to site "Sign In" > you will be redirected to [keycloak](http://keycloak:9000)
-   - the use username is "lportaluser" and the password "lportalpass"
+ - use right to site `Sign In` > you will be redirected to [keycloak](http://keycloak:9000)
+   - the use username is `lportaluser` and the password `lportalpass`
 
  - go to [gdiportal](http://localhost:8080/gdiportal/) - it is already pre-populated with example data 
    - check the table [Dataset](http://localhost:8080/gdiportal/tables/#/Dataset)
