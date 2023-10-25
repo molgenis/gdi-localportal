@@ -1,0 +1,3 @@
+id,diseaseCode,ageOfOnset_ageGroup,ageOfOnset_age_iso8601duration,ageAtDiagnosis_ageGroup,ageAtDiagnosis_age_iso8601duration,familyHistory,severity,stage
+P0007498-0,Congenital myopathy,,,,,,,
+P0007498-1,Central core disease,,,,,,,

@@ -1,0 +1,41 @@
+{
+  "realm" : "lportal",
+  "users" : [ {
+    "id" : "80000000-4000-4000-4000-120000000000",
+    "createdTimestamp" : 1696258612393,
+    "username" : "lportaluser",
+    "enabled" : true,
+    "totp" : false,
+    "emailVerified" : true,
+    "firstName" : "Local",
+    "lastName" : "Portal",
+    "email" : "l@portal.user",
+    "credentials" : [ {
+      "id" : "0cb0f63c-89ce-495d-8c11-9a2dd1228353",
+      "type" : "password",
+      "userLabel" : "My password",
+      "createdDate" : 1696258632338,
+      "secretData" : "{\"value\":\"EljkoS7UZLdr2By0qUE7ksNv4JAIcding04AKl9I6BI=\",\"salt\":\"9rFkcHtoPrPCVDWCyouzOw==\",\"additionalParameters\":{}}",
+      "credentialData" : "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+    } ],
+    "disableableCredentialTypes" : [ ],
+    "requiredActions" : [ ],
+    "realmRoles" : [ "default-roles-lportal" ],
+    "notBefore" : 0,
+    "groups" : [ ]
+  }, {
+    "id" : "1cb40e16-0fb7-4b42-949d-83d5b0ec4103",
+    "createdTimestamp" : 1696258424893,
+    "username" : "service-account-lportalclient",
+    "enabled" : true,
+    "totp" : false,
+    "emailVerified" : false,
+    "serviceAccountClientId" : "lportalclient",
+    "credentials" : [ ],
+    "disableableCredentialTypes" : [ ],
+    "requiredActions" : [ ],
+    "realmRoles" : [ "default-roles-lportal" ],
+    "notBefore" : 0,
+    "groups" : [ ]
+  } ]
+}

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+#define the config file from docker-compose variables
+cat <<EOF >synchronization.config
+# for now values 0 (default, less), 1 (more) and 2 (most) verbose
+VERBOSE=0
+
+REMS_URL="http://rems:3000"
+
+PORTAL_URL="http://localportal:8080"
+#PORTAL_URL_REDIRECT="${PORTAL_URL}"
+PORTAL_URL_REDIRECT="http://localhost:8080"        # currently we redirect to localhost:8080
+PORTAL_DATABASE="${GDI_PORTAL_NAME:-gdiportal}"
+PORTAL_TABLE="datasets"
+PORTAL_READER="portalreader"
+PORTAL_READER_PASS="portalreaderpass"
+
+# main refresh loop delay in seconds
+MAIN_DELAY="10"
+
+_organization_id="umcg"
+_license_id="1"
+_form_id="1"
+_workflow_id="1"
+EOF

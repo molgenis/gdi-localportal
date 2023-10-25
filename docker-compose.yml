@@ -1,0 +1,115 @@
+networks:
+  private-net:
+services:
+  postgres:
+    image: postgres:14-alpine
+    hostname: postgres
+    ports:
+      - 5432:5432
+    networks:
+      - private-net
+    environment:
+    - POSTGRES_USER=pguser
+    - POSTGRES_PASSWORD=pgpass
+    - POSTGRES_DB=postgresdb
+    volumes:
+    - ./postgres/psql_data:/var/lib/postgresql/data
+    - ./postgres/initdb.sql:/docker-entrypoint-initdb.d/initdb.sql
+    command: -c 'shared_buffers=256MB' -c 'max_locks_per_transaction=1024'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-d", "molgenisdb", "&&",  "pg_isready", "-d", "remsdb", "&&",  "pg_isready", "-d", "keycloakdb"]
+      interval: 5s
+      timeout: 60s
+      retries: 5
+    restart: on-failure
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.3
+    hostname: keycloak
+    ports:
+      - 9000:9000
+    networks:
+      - private-net
+    entrypoint: /bin/bash -c "/opt/keycloak/bin/kc.sh import --optimized --dir /opt/keycloak/import && /opt/keycloak/bin/kc.sh start-dev --http-port 9000"
+    environment:
+    - KEYCLOAK_ADMIN=admin
+    - KEYCLOAK_ADMIN_PASSWORD=admin
+    volumes:
+    - ./keycloak/import:/opt/keycloak/import
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: /bin/bash -c "{ echo -e 'GET /realms/lportal/.well-known/openid-configuration HTTP/1.0\r\n\r\n\r\n' >&3; cat <&3 ; } 3<> /dev/tcp/localhost/9000" || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: on-failure
+  rems:
+    image: umcg/rems
+    env_file: ./.env
+    build:
+      context: ./rems/
+      args:
+        REMS_VERSION:
+        REMS_PORTALBOT_KEY:
+        PORTAL_DATABASE:
+    hostname: rems
+    ports:
+      - 3000:3000
+    networks:
+      - private-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      localportal:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD-SHELL", "curl", "127.0.0.1:3000" ]
+      interval: 10s
+      retries: 30
+      timeout: 5s
+      #start_period: 2m
+  localportal:
+    image: molgenis/molgenis-emx2:latest
+    env_file: ./.env
+    build:
+      context: ./localportal/
+      args:
+        GDI_PORTAL_NAME:
+        REMS_OWNER_EMAIL:
+        REMS_PORTALBOT_KEY:
+        MOLGENIS_POSTGRES_URI:
+        MOLGENIS_POSTGRES_USER:
+        MOLGENIS_POSTGRES_PASS:
+        MOLGENIS_OIDC_CLIENT_ID:
+        MOLGENIS_OIDC_CLIENT_SECRET:
+        MOLGENIS_OIDC_DISCOVERY_URI:
+        MOLGENIS_OIDC_CALLBACK_URL:
+    hostname: localportal
+    ports:
+      - 8080:8080
+    networks:
+      - private-net
+    environment:
+      # see also https://molgenis.github.io/molgenis-emx2/#/molgenis/use_permissions?id=to-enable-oidc-the-following-environment-variables-need-to-be-set
+      - MOLGENIS_POSTGRES_URI=jdbc:postgresql://postgres/molgenisdb
+      - MOLGENIS_POSTGRES_USER=molgenis
+      - MOLGENIS_POSTGRES_PASS=molgenis
+      - MOLGENIS_OIDC_CLIENT_ID=lportalclient
+      - MOLGENIS_OIDC_CLIENT_SECRET=kYBU698XaEyTqPQAtKeiQoN5KXLgrxF8
+      - MOLGENIS_OIDC_DISCOVERY_URI=http://keycloak:9000/realms/lportal/.well-known/openid-configuration
+      - MOLGENIS_OIDC_CALLBACK_URL=http://localhost:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "/bin/bash", " -c \"{ echo -e 'get / http/1.0\r\n\r\n\r\n' >&3; cat <&3 ; } 3<> /dev/tcp/127.0.0.1/8080\"" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: on-failure

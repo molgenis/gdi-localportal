@@ -1,0 +1,109 @@
+_LOCALPORTAL_URL="http://localhost:8080"
+_REMS_URL="http://rems:3000"
+_GRAPHQL_URL="${_LOCALPORTAL_URL}/${GDI_PORTAL_NAME:-gdiportal}/api/graphql"
+
+
+cat << EOF > install.sh
+#!/bin/bash
+
+_TOKEN=""
+_CSV_FILES=(IndividualsDiseases.csv IndividualsPhenotypicFeatures.csv Individuals.csv Files.csv Catalog.csv Dataset.csv Distribution.csv)
+
+
+while [[ -z "\${_TOKEN}" ]]; do
+  _TOKEN="\$(curl -s ${_LOCALPORTAL_URL}/api/graphql -m 120 -H "Content-Type: application/json" -d '{"query": "mutation { signin (email: \\"admin\\", password: \\"admin\\") { token } }"}' | grep "token" | tr -d '"' | awk '{print \$3}' )"
+  echo "Empty token, trying again ... "; sleep 1
+done
+
+echo "Token: \${_TOKEN}"
+echo "GraphQL URL: ${_GRAPHQL_URL}"
+
+echo -e "\\n\\n-------------------------------------------------------------------------"
+echo -n " - check if schema was alrady created: "
+curl -s ${_GRAPHQL_URL} -m 120 -H "x-molgenis-token:\${_TOKEN}" -H "Content-Type: application/json" | tr -d '\\n' | grep errors | grep -q message
+if [[ "\${?}" -ne "0" ]]; then
+   echo "yes"
+else
+   echo -n "no, creating now ... "
+   curl -s ${_LOCALPORTAL_URL}/api/graphql -m 120 -H "x-molgenis-token:\${_TOKEN}" -H "Content-Type: application/json" -d '{"query":"mutation{createSchema(name:\\"${GDI_PORTAL_NAME:-gdiportal}\\",template:\\"FAIR_DATA_HUB\\",description:\\"Local Portal\\",includeDemoData:true){message}}"}' | grep -q "Schema ${GDI_PORTAL_NAME:-gdiportal} created"
+   if [[ "\${?}" -eq "0" ]]; then
+      echo "done"
+   else
+      echo "error occured, exiting ... "
+      exit 1
+   fi
+fi
+
+echo -e "\\n\\n-------------------------------------------------------------------------"
+echo -n " - checking if user \${REMS_OWNER_EMAIL} is already added: "
+curl -s ${_GRAPHQL_URL} -m 120 -H "x-molgenis-token:\${_TOKEN}" -H "Content-Type: application/json" -d '{"query": "{_schema{members{email role}}}"}' 2>&1 | tr -d '\\n' | grep -q '"email" : "\${REMS_OWNER_EMAIL}"'
+if [[ "\${?}" -eq "0" ]]; then
+   echo "yes"
+else
+   echo "no, creating now ... "
+   echo -n "     - adding user \${REMS_OWNER_EMAIL} to Molgenis list of users ... "
+   curl -s ${_LOCALPORTAL_URL}/api/graphql -m 120 -H "Content-Type: application/json" -d '{"query": "mutation { change(users:[{email: \\"'\${REMS_OWNER_EMAIL}'\\" }]){ message }}"}' 2>&1
+   echo "done"
+   echo -n "     - fake user login of \${REMS_OWNER_EMAIL} ... "
+   curl -s ${_LOCALPORTAL_URL}/api/graphql -m 120 -H "Content-Type: application/json" -d '{"query": "mutation { signin (email: \\"'\${REMS_OWNER_EMAIL}'\\", password: \\"'\${REMS_OWNER_PASS}'\\") { token } }"}' 2>&1
+   echo "done"
+   echo -n "     - and assigning ownership ... "
+   curl -s ${_GRAPHQL_URL} -m 120 -H "x-molgenis-token:\${_TOKEN}" -H "Content-Type: application/json" -d '{"query": "mutation{change(members: [ { email:\\"'\${REMS_OWNER_EMAIL}'\\",role:\\"Owner\\"} ] ) { message } }"}' 2>&1 | grep -q "Meta update success"
+   [[ "$?" -eq "0" ]] && echo "done" || echo "error"
+fi
+
+echo -e "\\n\\n-------------------------------------------------------------------------"
+echo -n " - checking if the datasets are already created ... "
+curl -s ${_GRAPHQL_URL} -m 120 -H "x-molgenis-token:\${_TOKEN}" -H "Content-Type: application/json" -d '{"query": "{ Dataset { id } }"}' | grep -q '"id" :' 2>&1
+if [[ "\${?}" -ne "0" ]]; then
+   echo " yes"
+else
+   echo -n "no, adding now ... "
+   echo "done"
+fi
+
+echo -e "\\n\\n-------------------------------------------------------------------------"
+echo -n " - setting REMS redirect URL path: "
+curl -s ${_GRAPHQL_URL} -m 120 -H "x-molgenis-token:\${_TOKEN}" -H "Content-Type: application/json" -d '{"query": "mutation{change(settings:[{key:\\"REMS_URL\\",value:\\"'${_REMS_URL}'\\"}]){message}}"}' 2>&1 | grep -q "Meta update success"
+[[ "\${?}" -eq "0" ]] && echo "done" || echo "error"
+
+echo -e "\\n\\n-------------------------------------------------------------------------"
+echo " - cleaning some of default settings: "
+echo "   - tables: "
+
+# Reverse order from later populating > the tables have cross dependency
+for (( idx=\${#_CSV_FILES[@]}-1 ; idx>=0 ; idx-- )) ; do
+   _TABLE="\${_CSV_FILES[idx]%.csv}"
+   echo -n "      \${_TABLE} ... "
+   curl -s ${_LOCALPORTAL_URL}/${GDI_PORTAL_NAME:-gdiportal}/api/graphql -m 120 -H "x-molgenis-token:\${_TOKEN}" -H "Content-Type: application/json" -d '{"query": "mutation{ truncate(tables: \\"'\${_TABLE}'\\"){message}}"}' 2>&1 | grep -q "Truncated table"
+   [[ "$?" -eq "0" ]] && echo "done" || echo "error"
+done
+
+echo -n "   - removing default schema ... "
+curl -s ${_LOCALPORTAL_URL}/api/graphql -m 120 -H "x-molgenis-token:\${_TOKEN}" -H "Content-Type: application/json" -d '{"query": "mutation { deleteSchema( name: \\"pet store\\" ) { message } }"}' 2>&1 | grep -q "Schema pet store dropped"
+   [[ "$?" -eq "0" ]] && echo "done" || echo "error"
+echo "done"
+
+echo -e "\\n\\n-------------------------------------------------------------------------"
+cd /opt/localportal
+echo -n " - creating read-only portalreader user ... "
+curl -s ${_LOCALPORTAL_URL}/api/graphql -m 120 -H "x-molgenis-token:\${_TOKEN}" -H "Content-Type: application/json" -d '{"query": "mutation{signup(email:\\"portalreader\\",password:\\"portalreaderpass\\"){message}}"}' 2>&1 | grep -q "User.*added"
+   [[ "$?" -eq "0" ]] && echo "done" || echo "error"
+
+echo -n " - assigning the read-only role to the ${GDI_PORTAL_NAME:-gdiportal} ... "
+curl -s ${_GRAPHQL_URL} -m 120 -H "x-molgenis-token:\${_TOKEN}" -d '{"query": "mutation{change(members:[{email:\\"portalreader\\",role:\\"Viewer\\"}]){message}}"}' 2>&1 | grep -q "Meta update success"
+   [[ "$?" -eq "0" ]] && echo "done" || echo "error"
+
+echo -e "\\n\\n-------------------------------------------------------------------------"
+cd /opt/localportal
+echo " - importing .csv files"
+# Populate content from files in specific order > the tables have cross dependency
+for _FILE in \${_CSV_FILES[@]} ; do
+   _FILE=\${_FILE#./} && _API_URL=\${_FILE%.csv}
+   echo -n "   - importing \${_FILE} ... "
+   curl -s ${_LOCALPORTAL_URL}/${GDI_PORTAL_NAME:-gdiportal}/api/csv/\${_API_URL} -m 120 -H "x-molgenis-token:\${_TOKEN}" -H "Content-Type: application/json" --data-binary @\${_FILE} 2>&1 1>/dev/null
+   echo "done"
+done
+
+EOF
+

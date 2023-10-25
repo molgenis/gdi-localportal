@@ -1,0 +1,439 @@
+;; This file contains the default values of all config options supported by REMS.
+;; Details of the the config options are also documented here.
+;; REMS will log a warning if you use a config option not listed in this file.
+;; See docs/configuration.md for more info.
+
+{;; HTTP server port.
+ :port 3000 ; can be set to nil if only SSL is used
+
+ ;; SSL configuration, if SSL is not terminated before
+ :ssl-port nil ; no SSL by default
+ :ssl-keystore nil ; Java keystore file
+ :ssl-keystore-password nil ; (optional) password of key file
+
+ ;; Extra parameters to override HTTP server parameters
+ ;; A useful parameter could be `{:h2? true}` to enable HTTP/2 if you have SSL configured
+ :jetty-extra-params {}
+
+ ;; Url for this REMS installation. Should end with a /.
+ ;; Used for generating links in emails, in OpenId authentication (:oidc),
+ ;; and in the `iss` and `source` of generated GA4GH visas (see /api/permissions).
+ :public-url "http://localhost:3000/"
+ ;;:public-url "http://rems:3000/"
+
+ ;; When :nrepl-port is set, the application starts an nREPL server on load.
+ :nrepl-port nil
+
+ ;; When true, enables development features
+ ;; (should not be turned on in production)
+ :dev false
+
+ ;; Uses :database-url if it's defined. Otherwise :database-jndi-name is used.
+ :database-url "postgresql://postgres:5432/remsdb?user=remsuser&password=remspass" 
+ :database-jndi-name "java:comp/env/jdbc/rems"
+
+ ;; Value for PostgreSQL lock_timeout
+ :database-lock-timeout "10s"
+ ;; Value for PostgreSQL idle_in_transaction_session_timeout
+ :database-idle-in-transaction-session-timeout "20s"
+
+ ;; Extra parameters to override database connection pool settings on startup.
+ ;; A useful debugging parameter could be :leak-detection-threshold for example.
+ ;; For all possible configuration options, see https://github.com/brettwooldridge/HikariCP
+ :hikaricp-extra-params {}
+
+ ;; Path to a writable directory where to store the Lucene search index files.
+ :search-index-path "search-index"
+
+ ;; Supported authentication methods: :oidc, :fake
+ :authentication :oidc
+
+ ;; Log additional details about (OIDC) authentication. May leak secrets in the log, but useful for debugging.
+ :log-authentication-details false
+
+ ;; Show link to an alternative login service
+ :alternative-login-url nil
+
+ ;; What login data is used when :authentication :fake configuration is enabled.
+ ;; Supported options: :test, :demo
+ :fake-authentication-data :test
+
+ ;; For :oidc authentication
+ ;; DEPRECATED, prefer :oidc-metadata-url instead
+ :oidc-domain nil
+ ;; URL to OAuth Server Metadata metadata JSON, e.g.
+ ;;  :oidc-metadata-url "https://my.oidc.service/.well-known/openid-configuration"
+; :oidc-metadata-url "https://auth1.molgenis.net/realms/Molgenis/.well-known/openid-configuration"
+; :oidc-client-id "molgenis-rems"
+; :oidc-client-secret "38xksJakp08ZbXs2Xqk7yfRBUXex9aTj"
+ :oidc-metadata-url "http://keycloak:9000/realms/lportal/.well-known/openid-configuration"
+ :oidc-client-id "lportalclient"
+ :oidc-client-secret "kYBU698XaEyTqPQAtKeiQoN5KXLgrxF8"
+ ;; Which scopes to pass to the authorization endpoint
+ :oidc-scopes "openid profile email"
+ ;; Which id-token attribute to use as the rems userid. Must be a
+ ;; list of attributes [{:attribute "multiple"} {:attribute "attributes"}] that are searched in
+ ;; order and the first non-empty one used.
+ ;; Attribute can be renamed using :rename keyword: {:attribute "sub" :rename "elixirId"}
+ :oidc-userid-attributes [{:attribute "sub"}]
+ ;; Additional query parameters to add to the OIDC authorization_endpoint url when logging in
+ ;; Example:
+ ;;   :oidc-additional-authorization-parameters "&acr_values=foo&ui_locales=sv"
+ :oidc-additional-authorization-parameters nil
+
+ ;; List of attributes to try in order for a name, the first one will be used
+ :oidc-name-attributes ["name" "unique_name" "family_name"]
+ ;; List of attributes to try in order for an email address, the first one will be used
+ :oidc-email-attributes ["email"]
+ ;; List of additional attributes to read from OIDC claims. Each attribute can have keys:
+ ;;   :attribute (mandatory) - the name of the attribute as in the OIDC claim, a string
+ ;;   :name (optional) - a map with languages as keys and the localized name for the attribute as values
+ ;;
+ ;; Example:
+ ;;
+ ;;   :oidc-extra-attributes [{:attribute "groups"
+ ;;                            :name {:en "Groups" :fi "Ryhmät"}}
+ ;;                           {:attribute "employeeNumber"}]
+ :oidc-extra-attributes []
+ ;; For OIDC, the userid attribute is always required.
+ ;; You can further specify if a name or email is required.
+ ;; The default is to require a name.
+ :oidc-require-name true
+ :oidc-require-email false
+
+ ;; Normally, a logout will happen in a REMS internal URL,
+ ;; which performs:
+ ;; - the OIDC token revocation (override with `:oidc-perform-revoke-on-logout`),
+ ;; - REMS session termination, and
+ ;; - redirect to REMS homepage (override with `:oidc-logout-redirect-url`).
+ ;;
+ ;; To which URL a user is redirected to after a successful logout?
+ :oidc-logout-redirect-url "/"
+ ;; Should REMS POST to the revocation_endpoint received from OIDC metadata?
+ :oidc-perform-revoke-on-logout true
+
+ ;; Sending email.
+ ;;
+ ;; Either you specify `:smtp-host` and `:smtp-port` like here:
+ :smtp-host nil
+ :smtp-port 25
+ ;;
+ ;; Or you can specify a map under `:smtp` with host, port, authentication details etc.
+ ;;
+ ;; Example:
+ ;; :smtp {:host "https://..." :pass "..." :port 587 :ssl true}
+ ;;
+ ;; For the full set of available keys see https://github.com/drewr/postal#smtp
+ :smtp nil
+ :mail-from nil
+ :email-retry-period "P3D" ;; in ISO 8601 duration format https://en.wikipedia.org/wiki/ISO_8601#Durations
+
+ ;; External systems for pushing entitlements (v1)
+ ;;
+ ;; URLs to notify about granted and revoked entitlements.
+ :entitlements-target {:add nil
+                       :remove nil}
+
+ ;; External systems for pushing entitlements (v2)
+ ;; NB: remember feature flag `:enable-ega`
+ ;;
+ ;; Example:
+ ;; :entitlement-push [{:id "ega"
+ ;;                     :type :ega
+ ;;                     :connect-server-url "https://ega.ebi.ac.uk:8053/ega-openid-connect-server"
+ ;;                     :permission-server-url "https://ega.ebi.ac.uk:8053/ega-permissions"
+ ;;                     :client-id "..."
+ ;;                     :client-secret "..."}
+ :entitlement-push nil
+
+ ;; Default length for entitlements, in days. This only affects the UI of the approve command.
+ ;; The default, nil, means indefinite entitlements.
+ :entitlement-default-length-days nil
+
+ ;; URLs to notify about new events. An array of targets. Targets can have keys:
+ ;;   :url (mandatory) - the url to send HTTP PUT requests to
+ ;;   :event-types (optional) - an array of event types to send. A missing value means "send everything".
+ ;;   :timeout (optional) - timeout for the PUT in seconds. Defaults to 60s.
+ ;;   :headers (optional) - a map of additional HTTP headers to send.
+ ;;   :send-application? (optional) - should application be sent in `:event/application` (defaults to true)
+ ;;
+ ;; See also: docs/event-notification.md
+ ;;
+ ;; Example:
+ ;;
+ ;; :event-notification-targets [{:url "http://events/everything"}
+ ;;
+ ;;                              {:url "http://events/just-the-event-is-lighter"
+ ;;                               :send-application? false}
+ ;;
+ ;;                              {:url "http://events/filtered-by-type"
+ ;;                               :event-types [:application.event/created :application.event/submitted]
+ ;;                               :timeout 120
+ ;;                               :headers {"Authorization" "abc123"
+ ;;                                         "X-Header" "value"}}]
+ :event-notification-targets []
+
+ ;; Which database column to show as the application id.
+ ;; Options: :id, :external-id, :generated-and-assigned-external-id
+ :application-id-column :external-id
+
+ ;; List of supported languages. They will be selectable in the UI.
+ ;;:languages [:en :fi]
+ :languages [:en]
+ :default-language :en
+
+ ;; Path to a directory with translations for additional languages.
+ :translations-directory "translations/"
+
+ ;; Path to an external theme file to override variables in :theme.
+ ;; Will automatically set :theme-static-resources to a 'public' directory
+ ;; next to the theme file.
+ :theme-path nil
+
+ ;; Optional static resources directory for theme files.
+ :theme-static-resources nil
+
+ ;; UI theme variables.
+ :theme {:color1 "#eee"
+         :color2 "#fff"
+         :color3 "#000"
+         :color4 "#000"
+
+         ;; Images & logos
+         :img-path  "../../img/" ; Path for static images, relative to /css/<lang>/screen.css
+         :logo-name nil ; Big logo, used on home page. Also used on other pages if :navbar-logo-name is not set.
+         :logo-name-en nil ; Localized big logo, defaults to :logo-name
+         :logo-name-sm nil ; Small version of big logo, used in mobile mode.
+         :logo-name-en-sm nil ; Localized small version of big logo, defaults to :logo-name-sm
+         :navbar-logo-name nil ; Small logo for navbar. Used on non-home pages instead of :logo-name.
+         :navbar-logo-name-en nil ; Localized small logo for navbar, defaults to :navbar-logo-name
+         :logo-bgcolor nil
+         :logo-content-origin nil
+
+         ;; Phases
+         :phase-bgcolor "#eee"
+         :phase-color "#111"
+         :phase-bgcolor-active "#ccc"
+         :phase-color-active nil ; defaults to :phase-color
+         :phase-bgcolor-completed "#ccc"
+         :phase-color-completed nil ; defaults to :phase-color
+
+         ;; Navbar
+         :button-navbar-font-weight 700
+         :navbar-color "#111" ; color of text in navbar
+         :nav-color nil ; color of links on navbar, defaults to :link-color
+         :nav-active-color nil ; defaults to :color4
+         :nav-hover-color nil ; defaults to :color4
+         :big-navbar-text-transform "none" ; can be used to e.g. uppercase the navbar text
+
+         ;; Tables
+         :table-hover-color nil ; defaults to :table-text-color
+         :table-hover-bgcolor nil ; defaults to :color2
+         :table-bgcolor nil ; defaults to :color1
+         :table-shadow nil
+         :table-border "1px solid #ccc"
+         :table-heading-color "#fff"
+         :table-heading-bgcolor nil ; defaults to :color3
+         :table-selection-bgcolor nil ; defaults to a darkened :table-hover-bgcolor, :table-bgcolor or :color3
+         :table-text-color nil ; defaults to bootstrap colors
+         :table-stripe-color nil ; background for every second table row, defaults to :color1
+
+         ;; Text
+         :header-border "3px solid #ccc"
+         :header-shadow nil ; defaults to :table-shadow
+         :link-color  "#025b96"
+         :link-hover-color nil ; defaults to color4
+         :font-family "'Lato', sans-serif"
+         ;; Text colors:
+         :text-primary nil
+         :bg-primary nil
+         :text-secondary nil
+         :bg-secondary nil
+         :text-success nil
+         :bg-success nil
+         :text-danger nil
+         :bg-danger nil
+         :text-warning "#ffc107!important"
+         :bg-warning nil
+         :text-info nil
+         :bg-info nil
+         :text-light nil
+         :bg-light nil
+         :text-dark nil
+         :bg-dark nil
+         :text-white nil
+         :bg-white nil
+         :text-muted nil
+
+         ;; Alerts
+         :alert-primary-color nil ; defaults to bootstrap colors
+         :alert-primary-bgcolor nil ; defaults to bootstrap colors
+         :alert-primary-bordercolor nil ; defaults to :alert-primary-color
+         :alert-secondary-color nil ; defaults to bootstrap colors
+         :alert-secondary-bgcolor nil ; defaults to bootstrap colors
+         :alert-secondary-bordercolor nil ; defaults to :alert-secondary-color
+         :alert-success-color nil ; defaults to bootstrap colors
+         :alert-success-bgcolor nil ; defaults to bootstrap colors
+         :alert-success-bordercolor nil ; defaults to :alert-success-color
+         :alert-danger-color nil ; defaults to bootstrap colors
+         :alert-danger-bgcolor nil ; defaults to bootstrap colors
+         :alert-danger-bordercolor nil ; defaults to :alert-danger-color
+         :alert-warning-color nil ; defaults to bootstrap colors
+         :alert-warning-bgcolor nil ; defaults to bootstrap colors
+         :alert-warning-bordercolor nil ; defaults to :alert-warning-color
+         :alert-info-color nil ; defaults to bootstrap colors
+         :alert-info-bgcolor nil ; defaults to bootstrap colors
+         :alert-info-bordercolor nil ; defaults to :alert-info-color
+         :alert-light-color nil ; defaults to bootstrap colors
+         :alert-light-bgcolor nil ; defaults to bootstrap colors
+         :alert-light-bordercolor nil ; defaults to :alert-light-color
+         :alert-dark-color nil ; defaults to bootstrap colors
+         :alert-dark-bgcolor nil ; defaults to bootstrap colors
+         :alert-dark-bordercolor nil ; defaults to :alert-dark-color
+
+         ;; Buttons
+         :primary-button-color "#fff"
+         :primary-button-bgcolor nil ; defaults to :color4
+         :primary-button-hover-color nil ; defaults to :primary-button-color
+         :primary-button-hover-bgcolor nil ; defaults to :primary-button-bgcolor
+         :secondary-button-color "#fff"
+         :secondary-button-bgcolor nil ; defaults to :color4
+         :secondary-button-hover-color nil ; defaults to :secondary-button-color
+         :secondary-button-hover-bgcolor nil ; defaults to :secondary-button-bgcolor
+
+         ;; Misc
+         :footer-color nil ; defaults to :table-heading-color
+         :footer-bgcolor nil ; defaults to :table-heading-bgcolor or color3
+         :collapse-shadow nil ; defaults to :table-shadow
+         :collapse-bgcolor "#fff"
+         :collapse-color "#fff"}
+
+ ;; Optional extra static resources directory.
+ :extra-static-resources nil
+
+ ;; Optional extra script files loaded when UI loads
+ :extra-scripts {:root "/dev/null" :files []}
+ ;; Optional extra stylesheets loaded when UI loads.
+ ;; Use to set custom fonts for example
+ :extra-stylesheets {:root "./" :files ["/example-theme/extra-styles.css"]}
+
+ ;; Optional extra pages shown in the navigation bar.
+ ;;
+ ;; Example: define two pages
+ ;;
+ ;; :extra-pages [;; This is a page that's hosted at an external URL, only for logged-in users
+ ;;               {:id "hello"
+ ;;                :roles [:logged-in] ; only for this role
+ ;;                :heading false ; don't show the heading, write any Markdown heading you like, defaults to true
+ ;;                :url "http://example.org/hello.html" ; fallback URL
+ ;;                :translations {:fi {:title "Hei"
+ ;;                                    :url "http://example.org/fi/hello.html"} ; specific localized URL
+ ;;                               :en {:title "Hello"}}}
+ ;;
+ ;;               ;; This is a page that's a markdown file, localized into two languages.
+ ;;               ;; The files are searched under :extra-pages-path (see below).
+ ;;               {:id "about"
+ ;;                :filename "about.md" ; fallback file
+ ;;                :translations {:fi {:title "Info"
+ ;;                                    :filename "about-fi.md"} ; specific localized file
+ ;;                               :en {:title "About"
+ ;;                                    :filename "about-en.md"}}}]
+ ;;
+ ;; Additional options (for any type):
+ ;;   :show-menu true    ; show in top menu, defaults to true
+ ;;   :show-footer false ; show in footer, defaults to false
+ ;;   :roles ; Can be used to configure which users see and can access the extra page.
+ ;;          ; The :logged-in, or more specific roles are possible.
+ ;;          ; The default is to show the page to everyone.
+ ;;
+ ;; NB: Pages not accessible through menus will be served in the corresponding
+ ;; url `/extra-pages/<id>` and can be accessed through a link for example.
+ ;;
+ ;; Assets such as images can also be hosted by REMS if included the theme directory.
+ ;; See `:theme-path`.
+ ;;
+ ;; For example with this Markdown you can include an image:
+ ;;   ![REMS Logo](/img/rems_logo_en.png)
+ ;;
+
+ :extra-pages []
+
+ ;; Path to the markdown files for the extra pages.
+ :extra-pages-path nil
+
+ ;; The character used as the separator in csv files.
+ :csv-separator ","
+
+ ;; Optional, the number of days until the deadline for making a decision
+ ;; on an application, starting from the first submission.
+ :application-deadline-days nil
+
+ ;; List of commands to disable. See the swagger model of
+ ;; /api/applications/{application-id} field application/permissions
+ ;; for all possible values.
+ ;;
+ ;; Example:
+ ;; :disable-commands [:application.command/assign-external-id :application.command/change-resources]
+ :disable-commands []
+
+ ;; Show "Assign external id" action button in UI for handlers
+ :enable-assign-external-id-ui false
+
+ ;; Maximum size of attachment files in bytes (10000000 = 10MB).
+ ;; nil = no limit
+ :attachment-max-size 10000000
+
+ ;; Should applications be deleted after having been inactive for a set period of time?
+ ;; Use map with key as required application state, and value as a map:
+ ;;   {:application.state/draft {:delete-after "P90D" :reminder-before "P7D"}}
+ ;;   :delete-after - delete application after period of time since last activity
+ ;;   :reminder-before - (optional) send reminder about expiration to application members (as period of time before expiration)
+ ;; nil = feature not enabled.
+ ;; NB: currently :application.state/draft is the only supported application state
+ ;; NB: expirer-bot user must be created before enabling application expiration. see docs/bots.md for more information
+ ;; https://en.wikipedia.org/wiki/ISO_8601#Durations for duration formatting reference.
+ :application-expiration nil
+
+ ;; enable /api/applications/:id/experimental/pdf
+ ;; PDF API (experimental). DEPRECATED, will disappear
+ :enable-pdf-api false
+
+ ;; enable /api/permissions/:user
+ ;; see also docs/ga4gh-visas.md
+ :enable-permissions-api false
+
+ ;; Keys for signing GA4GH Visas produced by permissions api or sent to EGA.
+ ;; Format: path to file containing key in JWK (Json Web Key) format
+ :ga4gh-visa-private-key nil
+ :ga4gh-visa-public-key nil
+
+ ;; set of trusted issuers and jku values for claims
+ ;; e.g. [{:iss "https://ega.ebi.ac.uk:8443/ega-openid-connect-server/" :jku "https://ega.ebi.ac.uk:8443/ega-openid-connect-server/jwk"}]
+ :ga4gh-visa-trusted-issuers []
+
+ ;; Should the catalogue be public and visible to everyone, i.e. also to not logged-in users.
+ :catalogue-is-public false
+; :catalogue-is-public true
+
+ ;; Options used only for development
+ :test-database-url nil
+ :accessibility-report false ; should the axe accessibility tooling be included?
+ :enable-ega false ; should the EGA features be shown in the UI
+ :enable-doi false ; should the DOI features be shown in the UI
+ :enable-duo false ; should the DUO features be shown in the UI
+
+ :enable-catalogue-table true ; show catalogue page table of items
+ :enable-catalogue-tree false ; show catalogue page tree of items
+ :catalogue-tree-show-matching-parents true ; should parent categories be shown if children match?
+
+ :enable-cart true ; show shopping cart and allow bundling multiple resources into one application
+ :enable-save-compaction false ; whether to merge consecutive saves into one event (EXPERIMENTAL)
+ :enable-autosave false ; whether to automatically save the application as the applicant types (EXPERIMENTAL)
+ ;; which columns in applications list(s) should be hidden in UI
+ ;; allowed values: [:description :resource :applicant :handlers :state :todo :created :submitted :last-activity :view]
+ :application-list-hidden-columns []
+
+ :show-resources-section true ; should resources section be shown in the application UI
+ :show-attachment-zip-action true ; should the attachment download be shown in the application actions UI
+ :show-pdf-action true ; should PDF button be shown in the application actions UI
+ :enable-handler-emails true} ; should notification emails be sent to the handlers, reviewers, deciders for application actions (invitation emails will be sent regardless, reminders are also sent if configured)
