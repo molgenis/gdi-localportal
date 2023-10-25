@@ -25,7 +25,14 @@ Spin up docker compose
 
 to bring up
 
-ports exposed
+ports exposed:
+ - 3000 rems
+ - 5432 postgres
+ - 8080 localportal
+ - 9000 keycloak
+
+docker compose exec localportal bash
+
 
 where is stored waht
     postgres is permanent in ...

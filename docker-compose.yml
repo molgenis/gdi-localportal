@@ -20,7 +20,7 @@ services:
       test: ["CMD-SHELL", "pg_isready", "-d", "molgenisdb", "&&",  "pg_isready", "-d", "remsdb", "&&",  "pg_isready", "-d", "keycloakdb"]
       interval: 5s
       timeout: 60s
-      retries: 5
+      retries: 20
     restart: on-failure
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.3
@@ -42,7 +42,7 @@ services:
       test: /bin/bash -c "{ echo -e 'GET /realms/lportal/.well-known/openid-configuration HTTP/1.0\r\n\r\n\r\n' >&3; cat <&3 ; } 3<> /dev/tcp/localhost/9000" || exit 1
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 30
     restart: on-failure
   rems:
     image: umcg/rems
