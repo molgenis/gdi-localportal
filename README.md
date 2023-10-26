@@ -68,6 +68,53 @@ docker compose exec localportal bash
 
 ## The files locations inside the instances
 
+### Overview
+
+```mermaid
+stateDiagram-v2
+
+    up --> pg_docker
+    up --> kc_docker
+    up --> lp_docker
+    up --> rm_docker
+
+    state postgres_docker {
+        pg_docker --> postgres
+    }
+
+    kcstart: /opt/keycloak/bin/kc.sh start-dev --http-port 9000
+    realmjson: /opt/keycloak/import/lportal-realm.json
+    userjson: /opt/keycloak/import/lportal-users-0.json
+    kcimport: import 'lportal' schema and users lportaluser
+    
+    state keycloak_docker {
+        kc_docker --> kc_start
+        kc_docker --> kcimport
+        kc_start --> p9000
+        realmjson --> kcimport
+        userjson --> kcimport
+        kcstart --> java_appjar
+    }
+
+    java_appjar: java app.jar &
+    state localportal_docker {
+        lp_docker --> java_appjar
+        lp_docker --> install.sh.template
+        lp_docker --> synchronization.config.template
+        install.sh.template --> install.sh
+        /opt/localportal/install.sh -->  install.sh.log
+        synchronization.config.template --> synchronization.config
+    }
+
+    rems_jar: java rems.jar &
+    rems_config: /opt/rems/config.edn
+    state rems_docker {
+        rm_docker --> rems_config
+        rm_docker --> /opt/rems/install.sh
+        rems_config --> rems_jar
+        /opt/rems/install.sh --> /opt/rems/install.sh.log
+    }
+```
 If you wish to check the additional logs inside the instances, you can use (example for Localportal)
 
     $ docker-compose exec localportal /bin/bash
