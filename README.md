@@ -73,13 +73,13 @@ docker compose exec localportal bash
 ```mermaid
 stateDiagram-v2
 
-    up --> pg_docker
-    up --> kc_docker
-    up --> lp_docker
-    up --> rm_docker
+    up --> pg_entrypoint
+    up --> kc_entrypoint
+    up --> lp_entrypoint
+    up --> rm_entrypoint
 
-    state postgres_docker {
-        pg_docker --> postgres
+    state postgres_dockerfile {
+        pg_entrypoint --> postgres
     }
 
     kcstart: /opt/keycloak/bin/kc.sh start-dev --http-port 9000
@@ -87,9 +87,9 @@ stateDiagram-v2
     userjson: /opt/keycloak/import/lportal-users-0.json
     kcimport: import 'lportal' schema and users lportaluser
     
-    state keycloak_docker {
-        kc_docker --> kc_start
-        kc_docker --> kcimport
+    state keycloak_dockerfile {
+        kc_entrypoint --> kc_start
+        kc_entrypoint --> kcimport
         kc_start --> p9000
         realmjson --> kcimport
         userjson --> kcimport
@@ -97,10 +97,10 @@ stateDiagram-v2
     }
 
     java_appjar: java app.jar &
-    state localportal_docker {
-        lp_docker --> java_appjar
-        lp_docker --> install.sh.template
-        lp_docker --> synchronization.config.template
+    state localportal_dockerfile {
+        lp_entrypoint --> java_appjar
+        lp_entrypoint --> install.sh.template
+        lp_entrypoint --> synchronization.config.template
         install.sh.template --> install.sh
         /opt/localportal/install.sh -->  install.sh.log
         synchronization.config.template --> synchronization.config
@@ -108,9 +108,9 @@ stateDiagram-v2
 
     rems_jar: java rems.jar &
     rems_config: /opt/rems/config.edn
-    state rems_docker {
-        rm_docker --> rems_config
-        rm_docker --> /opt/rems/install.sh
+    state rems_dockerfile {
+        rm_entrypoint --> rems_config
+        rm_entrypoint --> /opt/rems/install.sh
         rems_config --> rems_jar
         /opt/rems/install.sh --> /opt/rems/install.sh.log
     }
