@@ -19,17 +19,17 @@ Clone the repository and navigate to proof-of-concept branch
     $ git clone https://github.com/molgenis/gdi-localportal
     $ cd gdi-localportal
 
-Add keycloak to /etc/hosts on the machine the docker compose is running, example
+The `keycloak` hostname should point to the localhost `127.0.0.1` - by adding on the machine that is running docker-compose in the `/etc/hosts` file
 
 ```
-    127.0.0.1   localhirods-localost localhost.localdomain localhost4 localhost4.localdomain4 aai-mock keycloak postgres rems localportal
+    127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4 keycloak
 ```
 
-Spin up docker compose
+Start the docker compose
 
     $ docker-compose up -d
 
-(the build and spinup time is approximately 4 min on 2 core and 8gb ram host, note that instances still need to install the services after that, which takes additional 2 minutes or so)
+(the build time is approx. 4 min on slower hosts - after that the instances still need to configure the services, which takes additional 2 minutes or so)
 
 Ports exposed on the host machine are
  - 3000 rems
@@ -39,9 +39,9 @@ Ports exposed on the host machine are
 
 ## First use of the Localportal
 
-navigate to Localportal
+Localportal
 
- - [Localportal](http://localhost:8080/)
+ - navigate to [Localportal](http://localhost:8080/)
  - use right to site `Sign In` > you will be redirected to [keycloak](http://keycloak:9000)
    - the use username is `lportaluser` and the password `lportalpass`
  - go to [gdiportal](http://localhost:8080/gdiportal/) - it is already pre-populated with example data 
@@ -55,16 +55,14 @@ navigate to Localportal
      - tick the checkbox GDI
      - click "Save Ddataset"
 
-Let's navigate to REMS
- - [REMS catalogue](http://localhost:3000/catalogue)
+Rems 
+ - navigate to [REMS catalogue](http://localhost:3000/catalogue)
  - click "Login" > your login will be automatically detected (since you just did it in the Localportal)
  - you should be able to see all the datasets except the "B1MG-RD-files-ped" that you deleted
  - the newly created "fastq_samplesX" is available, and it contains the link from REMS to the correct entry form at Localportal
 
-navigate back to Localportal > gportal
-    - [gportal](http://localhost:8080/gdiportal/gportal/#/)
-docker compose exec localportal bash
-
+Localportal - gportal
+    - there is `gportal` web interface avaialable at the `Localportal` > [gportal](http://localhost:8080/gdiportal/gportal/#/)
 
 ## The files locations inside the instances
 
@@ -115,6 +113,7 @@ stateDiagram-v2
         /opt/rems/install.sh --> /opt/rems/install.sh.log
     }
 ```
+
 If you wish to check the additional logs inside the instances, you can use (example for Localportal)
 
     $ docker-compose exec localportal /bin/bash
