@@ -66,54 +66,6 @@ Localportal - gportal
 
 ## The files locations inside the instances
 
-### Overview
-
-```mermaid
-stateDiagram-v2
-
-    up --> pg_entrypoint
-    up --> kc_entrypoint
-    up --> lp_entrypoint
-    up --> rm_entrypoint
-
-    state postgres_dockerfile {
-        pg_entrypoint --> postgres
-    }
-
-    kcstart: /opt/keycloak/bin/kc.sh start-dev --http-port 9000
-    realmjson: /opt/keycloak/import/lportal-realm.json
-    userjson: /opt/keycloak/import/lportal-users-0.json
-    kcimport: import 'lportal' schema and users lportaluser
-    
-    state keycloak_dockerfile {
-        kc_entrypoint --> kc_start
-        kc_entrypoint --> kcimport
-        kc_start --> p9000
-        realmjson --> kcimport
-        userjson --> kcimport
-        kcstart --> java_appjar
-    }
-
-    java_appjar: java app.jar &
-    state localportal_dockerfile {
-        lp_entrypoint --> java_appjar
-        lp_entrypoint --> install.sh.template
-        lp_entrypoint --> synchronization.config.template
-        install.sh.template --> install.sh
-        /opt/localportal/install.sh -->  install.sh.log
-        synchronization.config.template --> synchronization.config
-    }
-
-    rems_jar: java rems.jar &
-    rems_config: /opt/rems/config.edn
-    state rems_dockerfile {
-        rm_entrypoint --> rems_config
-        rm_entrypoint --> /opt/rems/install.sh
-        rems_config --> rems_jar
-        /opt/rems/install.sh --> /opt/rems/install.sh.log
-    }
-```
-
 If you wish to check the additional logs inside the instances, you can use (example for Localportal)
 
     $ docker-compose exec localportal /bin/bash
@@ -170,3 +122,84 @@ this command will remove the existing data and recreate the `psql_data` folder.
 
     $ docker compose down --rmi all -v                                  # shut down and remove all images and volumes
     $ sudo rm -rf postgres/psql_data/; mkdir postgres/psql_data/        # clean all the permanent postgres data
+
+# Overview diagram
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    up: docker-compose up -d
+    up --> pg_entrypoint
+    up --> kc_entrypoint
+    up --> ml_entrypoint
+    up --> rm_entrypoint
+
+    pg_lib: /var/lib/postgresql/data
+    pg_lib --> molgenisDB
+    pg_lib --> remsDB
+    pg_lib --> keycloakDB
+    pg_entrypoint: postgres
+    postgres: postgres instance @ localhost 5432
+    state postgres {
+        pg_entrypoint --> pg_lib
+        initdb.sql --> pg_entrypoint
+        pg_volume: volume from host ./postgres/psql_data/
+        state pg_volume {
+            keycloakDB
+            molgenisDB
+            remsDB
+        }
+    }
+
+    ml_jar: main service \n java app.jar &
+    ml_entrypoint: workdir /opt/localportal/
+    ml_install.sh: ./install.sh
+    ml_install.sh.template: install.sh.template
+    ml_install.sh.log: ./install.sh.log
+    ml_synchronization: Molgenis with REMS synchronization service \n ./synchronization.sh
+    ml_synchronization_log: ./synchronization.sh.log
+    molgenis: molgenis instance @ localhost 8080
+    state molgenis {
+        ml_entrypoint --> ml_install.sh.template
+        ml_entrypoint --> synchronization.config.template
+        ml_install.sh.template --> ml_install.sh
+        ml_install.sh -->  ml_install.sh.log
+        synchronization.config.template --> synchronization.config
+        synchronization.config --> ml_synchronization
+        ml_entrypoint --> ml_synchronization
+        ml_synchronization --> ml_synchronization_log
+        ml_entrypoint --> ml_jar
+        ml_jar --> ml_synchronization
+        ml_synchronization --> rm_jar
+        rm_jar --> ml_synchronization
+    }
+
+    rm_jar: main service \n java ./rems.jar &
+    rm_entrypoint: workdir /opt/rems/
+    rm_config: config.edn
+    rm_install.sh: ./install.sh
+    rm_install.sh.log: install.sh.log
+    rems: rems instance @ localhost 3000
+    state rems {
+        rm_entrypoint --> rm_jar
+        rm_config --> rm_jar
+        rm_install.sh --> rm_install.sh.log
+        rm_entrypoint --> rm_install.sh
+    }
+
+    kc_start: main service \n ./bin/kc.sh start-dev --http-port 9000
+    kc_entrypoint: workdir /opt/keycloak/
+    realm_json: ./import/lportal-realm.json
+    user_json: ./import/lportal-users-0.json
+    kc_import: import
+    keycloak: keycloak instance @ localhost/keycloak 9000
+    state keycloak {
+        kc_entrypoint --> kc_import
+        kc_entrypoint --> kc_start
+        kc_import --> kc_start
+        realm_json --> kc_import
+        user_json --> kc_import
+    }
+    kc_start --> rm_jar
+    kc_start --> ml_jar
+```
