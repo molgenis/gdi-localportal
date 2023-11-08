@@ -1,13 +1,15 @@
-# Local portal: a Proof of Concept implementation
+# Local portal: a proof of concept implementation
 
-Repository is holding the `docker compose` environment that configures from scratch the
- - `Localportal` (Molgenis) - to hold the GDI metadata, exposed via various interfaces: web page, FDP, Beacon
- - `REMS` from vanilla environment - for Data access requests, automatically from Localportal > Dataset
- - `Keycloak` - for a central AAI
- - and a `Postgres` instance holding all three databases
+This is the `docker compose` environment that configures
+ - [Molgenis](https://github.com/molgenis/molgenis-emx2) platform as a `Localportal` - a service to locally store and serve the GDI metadata, discoverable through various interfaces (FDP, Beacon, browsing, API calls ...)
+ - `REMS` from scratch - providing the Data access requests, it is automatically synchronized from `Molgenis` > `Dataset` table
+ - `Keycloak` - as a central AAI mockup service (holding the test realm and test users)
+ - and a `Postgres` - holding three separate databases for the first three services
 
-System requirements depends on OS, but usually docker host needs at least
- - 2 core and 3 gb or free memory (after OS) during build and spinup of instance
+This few services should provide complete environment to showcase the Localportal usage.
+
+System requirements depends on OS, but normaly docker host needs for compose at least
+ - 2 core and 3 gb or free memory (on top of running OS) for build and spinup of instance
  - and approx. 2 GB of empty disk space for all the images with pre-populated data
 
 Total image build time, spinup time, and the installation of services inside running instances is approx 5 minutes (depends on the system)
@@ -32,10 +34,10 @@ After the docker service has been started, you can spin up the docker compose
 (the build time is approx. 4 min on slower hosts - after that the instances still need to configure the services, which takes additional 2 minutes or so)
 
 Ports exposed on the host machine are
- - 3000 rems
- - 5432 postgres
- - 8080 localportal
- - 9000 keycloak
+ - `3000` for rems
+ - `5432` for postgres
+ - `8080` for molgenis
+ - `9000` for keycloak
 
 ## First use of the Localportal
 
@@ -55,13 +57,15 @@ Localportal
      - tick the checkbox GDI
      - click "Save Ddataset"
 
-Rems 
+Rems
+ 
  - navigate to [REMS catalogue](http://localhost:3000/catalogue)
  - click "Login" > your login will be automatically detected (since you just did it in the Localportal)
  - you should be able to see all the datasets except the "B1MG-RD-files-ped" that you deleted
  - the newly created "fastq_samplesX" is available, and it contains the link from REMS to the correct entry form at Localportal
 
 Localportal - gportal
+
     - there is `gportal` web interface avaialable at the `Localportal` > [gportal](http://localhost:8080/gdiportal/gportal/#/)
 
 ## The files locations inside the instances
@@ -79,7 +83,8 @@ global shared environment
 
 services are in /opt/{servicename} folders
 
-# Local portal
+# Instance notes
+## Molgenis / Localportal
 
 localhost:8080 > signin
     lportaluser
@@ -90,7 +95,7 @@ Logs for localportal
     docker compose exec localportal /bin/bash
     root# cat /opt/localportal/install.sh.log
 
-# REMS
+## REMS
 
 Increase synchronization script verbosity:
     $ docker compose exec rems /bin/bash
@@ -98,7 +103,7 @@ Increase synchronization script verbosity:
     root# source /opt/rems/synchronization.sh
 
 
-# Keycloak
+## Keycloak
 
 Is avaialable on http://keycloak:9000 (or http://localhost:9000 )
 
@@ -109,28 +114,39 @@ You can modify the existing lportaluser or make a new one, by loging into Keyclo
    - or modify users ( Users > lportaluser   
 
 
-# Postgres
+## Postgres
 
-In case that the postgres instance would get accidentaly restarted or shut down, the database files are saved stored safely inside the host machine `postgres/psql_data`. This folder is exposed as a volume of the postgres instance.
+Service is created from the latest available postgres docker container. The initial installation creates the databases with help of the script `initdb.sql`.
+
+`postgres/psql_data` folder on the host machine is exposed as a `/var/lib/postgresql/data` volume inside the postgres instance.
+This ensures that the database is safely stored across accidental instance reboots.
+
 In case you wish to delete the postgress data and start with fresh instance, you can issue
 
+```
     $ sudo rm -rf postgres/psql_data/ ; mkdir postgres/psql_data/
+```
+to delete the database folder and recrete an empty folder to store the future data.
 
-this command will remove the existing data and recreate the `psql_data` folder.
+# Cleanup
+## Rebuild all the instances - complete w/ remove the database data
 
-# Completely rebuild all the instances - also clean data
-
+```
     $ docker compose down --rmi all -v                                  # shut down and remove all images and volumes
     $ sudo rm -rf postgres/psql_data/; mkdir postgres/psql_data/        # clean all the permanent postgres data
     $ docker compose up -d --force-recreate --build
+```
 
+## Shutting down and cleaning up
 
-# Shutting down and cleaning up
-
+```
     $ docker compose down --rmi all -v                                  # shut down and remove all images and volumes
     $ sudo rm -rf postgres/psql_data/; mkdir postgres/psql_data/        # clean all the permanent postgres data
+```
 
 # Overview diagram
+
+The service calls and scripts connected are shown here.
 
 ```mermaid
 stateDiagram-v2
@@ -179,19 +195,21 @@ stateDiagram-v2
     molgenis: molgenis instance @ localhost 8080
     ml_sync_conf: synchronization.config
     ml_sync_conf_template: synchronization.config.template
+    sample_data: "Catalog.csv\nDataset.csv\nDistribution.csv\nFiles.csv\nIndividuals.csv\nIndividualsDiseases.csv\nIndividualsPhenotypicFeatures.csv"
     state molgenis {
         ml_entrypoint --> ml_install.sh.template
         ml_entrypoint --> ml_sync_conf_template
         ml_install.sh.template --> ml_install.sh
         ml_install.sh -->  ml_install.sh.log
+        sample_data --> ml_install.sh
+
         ml_sync_conf_template --> ml_sync_conf
         ml_sync_conf --> ml_synchronization
         ml_entrypoint --> ml_synchronization
         ml_synchronization --> ml_synchronization_log
         ml_entrypoint --> ml_jar
         ml_jar --> ml_synchronization
-
-        
+       
     }
 
     rm_jar: main service \n java ./rems.jar &

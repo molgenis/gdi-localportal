@@ -67,7 +67,7 @@ services:
         condition: service_healthy
     restart: on-failure
     healthcheck:
-      test: [ "CMD-SHELL", "curl", "127.0.0.1:3000" ]
+      test: curl 127.0.0.1:3000
       interval: 15s
       retries: 40
       timeout: 5s
