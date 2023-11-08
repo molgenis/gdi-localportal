@@ -63,20 +63,20 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
-      localportal:
+      molgenis:
         condition: service_healthy
     restart: on-failure
     healthcheck:
       test: [ "CMD-SHELL", "curl", "127.0.0.1:3000" ]
-      interval: 10s
-      retries: 30
+      interval: 15s
+      retries: 40
       timeout: 5s
       #start_period: 2m
-  localportal:
-    image: umcg/localportal
+  molgenis:
+    image: umcg/molgenis
     env_file: ./.env
     build:
-      context: ./localportal/
+      context: ./molgenis/
       args:
         GDI_PORTAL_NAME:
         REMS_OWNER_EMAIL:
@@ -88,7 +88,7 @@ services:
         MOLGENIS_OIDC_CLIENT_SECRET:
         MOLGENIS_OIDC_DISCOVERY_URI:
         MOLGENIS_OIDC_CALLBACK_URL:
-    hostname: localportal
+    hostname: molgenis
     ports:
       - 8080:8080
     networks:

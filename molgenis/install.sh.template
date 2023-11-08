@@ -1,5 +1,5 @@
 _LOCALPORTAL_URL="http://localhost:8080"
-_REMS_URL="http://rems:3000"
+_REMS_URL="http://localhost:3000"
 _GRAPHQL_URL="${_LOCALPORTAL_URL}/${GDI_PORTAL_NAME:-gdiportal}/api/graphql"
 
 
@@ -9,7 +9,7 @@ cat << EOF > install.sh
 _TOKEN=""
 _CSV_FILES=(IndividualsDiseases.csv IndividualsPhenotypicFeatures.csv Individuals.csv Files.csv Catalog.csv Dataset.csv Distribution.csv)
 
-
+# use default admin user for molgenis, password should be later changed
 while [[ -z "\${_TOKEN}" ]]; do
   _TOKEN="\$(curl -s ${_LOCALPORTAL_URL}/api/graphql -m 120 -H "Content-Type: application/json" -d '{"query": "mutation { signin (email: \\"admin\\", password: \\"admin\\") { token } }"}' | grep "token" | tr -d '"' | awk '{print \$3}' )"
   echo "Empty token, trying again ... "; sleep 1
@@ -86,7 +86,7 @@ curl -s ${_LOCALPORTAL_URL}/api/graphql -m 120 -H "x-molgenis-token:\${_TOKEN}" 
 echo "done"
 
 echo -e "\\n\\n-------------------------------------------------------------------------"
-cd /opt/localportal
+cd /opt/molgenis
 echo -n " - creating read-only portalreader user ... "
 curl -s ${_LOCALPORTAL_URL}/api/graphql -m 120 -H "x-molgenis-token:\${_TOKEN}" -H "Content-Type: application/json" -d '{"query": "mutation{signup(email:\\"portalreader\\",password:\\"portalreaderpass\\"){message}}"}' 2>&1 | grep -q "User.*added"
    [[ "$?" -eq "0" ]] && echo "done" || echo "error"
@@ -96,7 +96,7 @@ curl -s ${_GRAPHQL_URL} -m 120 -H "x-molgenis-token:\${_TOKEN}" -d '{"query": "m
    [[ "$?" -eq "0" ]] && echo "done" || echo "error"
 
 echo -e "\\n\\n-------------------------------------------------------------------------"
-cd /opt/localportal
+cd /opt/molgenis/sample_data
 echo " - importing .csv files"
 # Populate content from files in specific order > the tables have cross dependency
 for _FILE in \${_CSV_FILES[@]} ; do

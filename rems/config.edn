@@ -63,9 +63,6 @@
  :oidc-domain nil
  ;; URL to OAuth Server Metadata metadata JSON, e.g.
  ;;  :oidc-metadata-url "https://my.oidc.service/.well-known/openid-configuration"
-; :oidc-metadata-url "https://auth1.molgenis.net/realms/Molgenis/.well-known/openid-configuration"
-; :oidc-client-id "molgenis-rems"
-; :oidc-client-secret "38xksJakp08ZbXs2Xqk7yfRBUXex9aTj"
  :oidc-metadata-url "http://keycloak:9000/realms/lportal/.well-known/openid-configuration"
  :oidc-client-id "lportalclient"
  :oidc-client-secret "kYBU698XaEyTqPQAtKeiQoN5KXLgrxF8"

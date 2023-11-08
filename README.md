@@ -1,6 +1,6 @@
 # Local portal: a Proof of Concept implementation
 
-Repository is holding the `docker-compose` environment that configures from scratch the
+Repository is holding the `docker compose` environment that configures from scratch the
  - `Localportal` (Molgenis) - to hold the GDI metadata, exposed via various interfaces: web page, FDP, Beacon
  - `REMS` from vanilla environment - for Data access requests, automatically from Localportal > Dataset
  - `Keycloak` - for a central AAI
@@ -19,15 +19,15 @@ Clone the repository and navigate to proof-of-concept branch
     $ git clone https://github.com/molgenis/gdi-localportal
     $ cd gdi-localportal
 
-The `keycloak` hostname should point to the localhost `127.0.0.1` - by adding on the machine that is running docker-compose in the `/etc/hosts` file
+The `keycloak` hostname should point to the localhost `127.0.0.1` - by adding on the machine that is running docker compose in the `/etc/hosts` file
 
 ```
     127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4 keycloak
 ```
 
-Start the docker compose
+After the docker service has been started, you can spin up the docker compose
 
-    $ docker-compose up -d
+    $ docker compose up -d
 
 (the build time is approx. 4 min on slower hosts - after that the instances still need to configure the services, which takes additional 2 minutes or so)
 
@@ -68,7 +68,7 @@ Localportal - gportal
 
 If you wish to check the additional logs inside the instances, you can use (example for Localportal)
 
-    $ docker-compose exec localportal /bin/bash
+    $ docker compose exec localportal /bin/bash
 
 The instances have stored their installation files and the output of those installations inside
     /opt/[instance name]/
@@ -87,13 +87,13 @@ localhost:8080 > signin
 
 
 Logs for localportal
-    docker-compose exec localportal /bin/bash
+    docker compose exec localportal /bin/bash
     root# cat /opt/localportal/install.sh.log
 
 # REMS
 
 Increase synchronization script verbosity:
-    $ docker-compose exec rems /bin/bash
+    $ docker compose exec rems /bin/bash
     root# echo VERBOSE=2 >> /opt/rems/synchronization.config
     root# source /opt/rems/synchronization.sh
 
@@ -118,6 +118,13 @@ In case you wish to delete the postgress data and start with fresh instance, you
 
 this command will remove the existing data and recreate the `psql_data` folder.
 
+# Completely rebuild all the instances - also clean data
+
+    $ docker compose down --rmi all -v                                  # shut down and remove all images and volumes
+    $ sudo rm -rf postgres/psql_data/; mkdir postgres/psql_data/        # clean all the permanent postgres data
+    $ docker compose up -d --force-recreate --build
+
+
 # Shutting down and cleaning up
 
     $ docker compose down --rmi all -v                                  # shut down and remove all images and volumes
@@ -128,11 +135,8 @@ this command will remove the existing data and recreate the `psql_data` folder.
 ```mermaid
 stateDiagram-v2
     direction LR
+
     up: docker-compose up -d
-    up --> pg_entrypoint
-    up --> kc_entrypoint
-    up --> ml_entrypoint
-    up --> rm_entrypoint
 
     pg_lib: /var/lib/postgresql/data
     pg_lib --> molgenisDB
@@ -151,6 +155,20 @@ stateDiagram-v2
         }
     }
 
+    kc_start: main service \n ./bin/kc.sh start-dev --http-port 9000
+    kc_entrypoint: workdir /opt/keycloak/
+    kc_realm_json: ./import/lportal-realm.json
+    kc_user_json: ./import/lportal-users-0.json
+    kc_import: import
+    keycloak: keycloak instance @ localhost/keycloak 9000
+    state keycloak {
+        kc_entrypoint --> kc_import
+        kc_entrypoint --> kc_start
+        kc_import --> kc_start
+        kc_realm_json --> kc_import
+        kc_user_json --> kc_import
+    }
+
     ml_jar: main service \n java app.jar &
     ml_entrypoint: workdir /opt/localportal/
     ml_install.sh: ./install.sh
@@ -159,19 +177,21 @@ stateDiagram-v2
     ml_synchronization: Molgenis with REMS synchronization service \n ./synchronization.sh
     ml_synchronization_log: ./synchronization.sh.log
     molgenis: molgenis instance @ localhost 8080
+    ml_sync_conf: synchronization.config
+    ml_sync_conf_template: synchronization.config.template
     state molgenis {
         ml_entrypoint --> ml_install.sh.template
-        ml_entrypoint --> synchronization.config.template
+        ml_entrypoint --> ml_sync_conf_template
         ml_install.sh.template --> ml_install.sh
         ml_install.sh -->  ml_install.sh.log
-        synchronization.config.template --> synchronization.config
-        synchronization.config --> ml_synchronization
+        ml_sync_conf_template --> ml_sync_conf
+        ml_sync_conf --> ml_synchronization
         ml_entrypoint --> ml_synchronization
         ml_synchronization --> ml_synchronization_log
         ml_entrypoint --> ml_jar
         ml_jar --> ml_synchronization
-        ml_synchronization --> rm_jar
-        rm_jar --> ml_synchronization
+
+        
     }
 
     rm_jar: main service \n java ./rems.jar &
@@ -187,19 +207,17 @@ stateDiagram-v2
         rm_entrypoint --> rm_install.sh
     }
 
-    kc_start: main service \n ./bin/kc.sh start-dev --http-port 9000
-    kc_entrypoint: workdir /opt/keycloak/
-    realm_json: ./import/lportal-realm.json
-    user_json: ./import/lportal-users-0.json
-    kc_import: import
-    keycloak: keycloak instance @ localhost/keycloak 9000
-    state keycloak {
-        kc_entrypoint --> kc_import
-        kc_entrypoint --> kc_start
-        kc_import --> kc_start
-        realm_json --> kc_import
-        user_json --> kc_import
-    }
-    kc_start --> rm_jar
+    pg_entrypoint --> ml_jar
+    pg_entrypoint --> rm_jar
+    pg_entrypoint --> kc_start
+
     kc_start --> ml_jar
+    kc_start --> rm_jar
+    rm_jar --> ml_synchronization
+    ml_synchronization --> rm_jar
+
+    up --> rm_entrypoint
+    up --> ml_entrypoint
+    up --> pg_entrypoint
+    up --> kc_entrypoint
 ```
