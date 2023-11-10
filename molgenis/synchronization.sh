@@ -201,7 +201,7 @@ function _rems_update_catalogue_titles(){
             }
             if [[ "${_portal_resource_title}" != "${_current_catalogue_title}" ]]; then
                _curl PUT /api/catalogue-items/edit '{ "id": '${_current_catalogue_id}', "localizations": { "en": { "title": "'${_portal_resource_title}'" } } }'
-               echo "      title of .resid==\"${_each_rems_resource}\" updated to \"${_portal_resource_title}\" [$(date)]"
+               echo "      > title of .resid==\"${_each_rems_resource}\" updated to \"${_portal_resource_title}\" [$(date)]"
             fi
          fi
       done <<< "${_dataset_all_ids}"
@@ -231,7 +231,7 @@ while : ; do
          sleep ${MAIN_DELAY}
       done
    else
-      echo "No organizations found, trying again after a few seconds ... "
+      echo "No organizations found, trying again if a few seconds ... "
       sleep 5
    fi
 done
