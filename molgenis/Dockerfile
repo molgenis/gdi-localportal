@@ -1,4 +1,4 @@
-FROM molgenis/molgenis-emx2:latest
+FROM molgenis/molgenis-emx2:v10.0.0
 
 WORKDIR /opt/molgenis
 

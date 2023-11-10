@@ -41,6 +41,12 @@ Ports exposed on the host machine are
 
 ## First use of the Localportal
 
+First make sure that all of the services are running: use `docker-compose ps -a` and make sure all the instances are having status `healthy`.
+
+### Example 1: Data manager adding/editing dataset
+
+Showing how to add and change the Datasets into Molgenis, and how that gets updated on REMS.
+
 Localportal
 
  - navigate to [Localportal](http://localhost:8080/)
@@ -64,9 +70,13 @@ Rems
  - you should be able to see all the datasets except the "B1MG-RD-files-ped" that you deleted
  - the newly created "fastq_samplesX" is available, and it contains the link from REMS to the correct entry form at Localportal
 
+### Example 2: user finding and requesting data access
+
 Localportal - gportal
 
-    - there is `gportal` web interface avaialable at the `Localportal` > [gportal](http://localhost:8080/gdiportal/gportal/#/)
+ - there is web interface available at the `Localportal` > [gportal](http://localhost:8080/gdiportal/gportal/#/)
+   - [Find dataset](http://localhost:8080/gdiportal/gportal/#/datasets) shows all the datasets available and their description, it also provides data access request
+   - [Search with Beacon](http://localhost:8080/gdiportal/gportal/#/beacon) shows the web front end of creating Beacon v2 queries on top of available datasets
 
 ## The files locations inside the instances
 

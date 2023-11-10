@@ -11,7 +11,7 @@ PORTAL_URL="http://molgenis:8080"
 #PORTAL_URL_REDIRECT="${PORTAL_URL}"
 PORTAL_URL_REDIRECT="http://localhost:8080"        # currently we redirect to localhost:8080
 PORTAL_DATABASE="${GDI_PORTAL_NAME:-gdiportal}"
-PORTAL_TABLE="datasets"
+PORTAL_TABLE="Dataset"
 PORTAL_READER="portalreader"
 PORTAL_READER_PASS="portalreaderpass"
 

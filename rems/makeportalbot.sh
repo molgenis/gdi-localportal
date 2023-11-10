@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# making portalbot
+# making portalbot user with appropriate permissions
 #
 
 # but first wait for REMS to be up
@@ -16,6 +16,8 @@ echo " - [ makeportalbot.sh ] making portalbot as owner ..."
 java -Drems.config=config.edn -jar rems_${REMS_VERSION}.jar grant-role owner portalbot
 echo " - [ makeportalbot.sh ] adding portalbot permissions to access /api/ paths ..." 
 java -Drems.config=config.edn -jar rems_${REMS_VERSION}.jar api-key allow ${REMS_PORTALBOT_KEY} any '/api/(catalogue|catalogue-items|resources)/.*'
+echo " - [ makeportalbot.sh ] adding portalbot permissions to access /api/organizations ..." 
+java -Drems.config=config.edn -jar rems_${REMS_VERSION}.jar api-key allow ${REMS_PORTALBOT_KEY} any '/api/organizations'
 echo " - [ makeportalbot.sh ] assigning api-key to portalbot ..." 
 java -Drems.config=config.edn -jar rems_${REMS_VERSION}.jar api-key set-users ${PORTALBOT_KEY} portalbot
 
