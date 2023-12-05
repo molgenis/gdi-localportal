@@ -1,4 +1,5 @@
-# Local portal: a proof of concept implementation
+# _Proof of concept v0.1 - please help us improve!_
+# Dockerized implementation of local portal for GDI
 
 This is the `docker compose` environment that configures
  - [Molgenis](https://github.com/molgenis/molgenis-emx2) platform as a `Localportal` - a service to locally store and serve the GDI metadata, discoverable through various interfaces (FDP, Beacon, browsing, API calls ...)
